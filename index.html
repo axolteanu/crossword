@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Crossword</title>
+    <link href="css/style.css" rel="stylesheet">
+  </head>
+  <body>
+  <div id="correctPopup">Congratulations!</div>
+    <header>Crossword</header>
+    <main>
+      <div id="cw-grid"></div>
+      <div id="clue-main">
+        <div class="clue-section">
+          <header class="clue-section-header">Across</header>
+          <div id="across-section" class="clue-section-body">
+          </div>
+        </div>
+        <div class="clue-section">
+          <header class="clue-section-header">Down</header>
+          <div id="down-section" class="clue-section-body">
+          </div>
+        </div>
+      </div>
+    </main>
+    <input id="fileInput" type="file">
+    <script>
+      var nRows = null;
+      var nCols = null;
+      var cwGrid = document.getElementById('cw-grid');
+      var selectedLineId = null;
+      var mapIndexes = new Map();
+      var mapSolution = new Map();
+      var arrBlackCells = new Array();
+      var arrHighlightedCellIds  = new Array();
+      var selectedCellId = null;
+      var crosswordFinished = false;
+
+      document.getElementById('fileInput').addEventListener('change', function() {
+          var fr = new FileReader();
+          fr.onload = function(){
+            initializeCrossword(fr.result);
+          }
+          fr.readAsText(this.files[0]);
+        });
+      
+      document.addEventListener('keydown', onKeyDown);
+
+      function initializeCrossword(data){
+        let splitData = data.split('\r\n');
+        parseDimensions(splitData.shift());
+        createGrid();
+        parseBlackCells(splitData.shift());
+        parseIndexes(splitData.shift());
+        parseSolution(splitData.shift());
+        adjustClueSectionHeight();
+        parseClues(splitData);
+        selectNewLine(document.getElementById('across-section').children[0]);
+        console.log(mapSolution);
+      }
+
+      function parseDimensions(data){
+        let dimensions = data.split('-');
+        nCols = dimensions[0];
+        nRows = dimensions[1];
+      }
+
+      function adjustClueSectionHeight(){
+        let clueMainHeight = document.getElementById('clue-main').getBoundingClientRect().height;
+        let sectionHeight = (clueMainHeight / 2) - 10;
+
+        let clueSections = document.getElementsByClassName('clue-section');
+        clueSections[0].style.height = sectionHeight + 'px';
+        clueSections[1].style.height = sectionHeight + 'px';
+        clueSections[1].style.marginTop = 20 + 'px';
+      }
+
+      function createGrid(){
+        for(let i = 0; i < nRows; i++){
+          const newRow = document.createElement('div');
+          newRow.style.flexGrow = '1';
+          newRow.style.display = 'flex';
+          for(let j = 0; j < nCols; j++){
+            const newCell = document.createElement('div');
+            newCell.id = (j + 1) + '-' + (i + 1);
+            newCell.style.borderTop = '1px solid black';
+            newCell.style.borderLeft = '1px solid black';
+            if((i + 1) % nRows == 0){
+              newCell.style.borderBottom = '1px solid black';
+            }
+            if((j + 1) % nCols == 0){
+              newCell.style.borderRight = '1px solid black';
+            }
+            newCell.style.flexGrow = '1';
+            newCell.style.position = 'relative';
+            newCell.addEventListener('click', e =>{
+              handleOnCellClick(newCell);
+            });
+            let indexElem = document.createElement('div');
+            indexElem.className = 'index'
+            newCell.appendChild(indexElem);
+            let textElem = document.createElement('div');
+            textElem.className = 'text';
+            textElem.style.userSelect = 'none';
+            newCell.appendChild(textElem);
+            newRow.appendChild(newCell);
+          }
+          cwGrid.appendChild(newRow);           
+        }
+      }
+
+      function handleOnCellClick(cellElem){
+        if(!arrBlackCells.includes(cellElem.id)){
+          if(cellElem.id != selectedCellId){
+            if(!arrHighlightedCellIds.includes(cellElem.id)){
+              selectedCellId = cellElem.id;
+              selectLineOnCellClick(false);
+            }else{
+              let selectedCellElem = document.getElementById(selectedCellId);
+              selectedCellElem.style.backgroundColor = '#ffe0b3';
+              cellElem.style.backgroundColor = '#ffcc80';
+              selectedCellId = cellElem.id;
+            }
+          }else{
+            selectLineOnCellClick(true);
+          }
+        }
+      }
+
+      function selectLineOnCellClick(changeDirection){
+        let direction = selectedLineId[0];
+        let cellCoordinates = selectedCellId.split('-');
+        let colId = cellCoordinates[0];
+        let rowId = cellCoordinates[1];
+        let newLine = null;
+        let cellId = null;
+        let cellElem = null
+        if((direction == 'D' && !changeDirection) || (direction == 'A' && changeDirection)){
+          while(true){
+            cellId = colId + '-' + rowId;
+            cellElem = document.getElementById(cellId);
+            if(arrBlackCells.includes(cellElem.id)){
+              break;
+            }else if(rowId < 1){
+              break;
+            }else if(cellElem.children[0].innerHTML != ''){
+              newLine = document.getElementById('D' + cellElem.children[0].innerHTML);   
+              if(newLine != null){
+                break;
+              }
+            }
+            rowId--;
+          }
+          selectNewLine(newLine, false);
+        }else if((direction == 'A' && !changeDirection) || (direction == 'D' && changeDirection)){
+          while(true){
+            cellId = colId + '-' + rowId;
+            cellElem = document.getElementById(cellId);
+            if(arrBlackCells.includes(cellElem.id)){
+              break;
+            }else if(colId < 1){
+              break;
+            }else if(cellElem.children[0].innerHTML != ''){
+              newLine = document.getElementById('A' + cellElem.children[0].innerHTML);   
+              if(newLine != null){
+                break;
+              }
+            }
+            colId--;
+          }
+          selectNewLine(newLine, false);
+        }
+      }
+
+      function parseBlackCells(data){
+        let shifts = data.split('-');
+        let rows = document.getElementById('cw-grid').children;
+        let cells = new Array();
+        for(let i = 0; i < rows.length; i++){
+          cells.push(...rows[i].children);
+        }
+        let i = -1;
+        while(shifts.length > 0){
+          let shift = shifts.shift();
+          i = i + parseInt(shift);
+          cells[i].style.backgroundColor = 'black';
+          arrBlackCells.push(cells[i].id);
+        }
+      }
+
+      function parseIndexes(data){
+        let shifts = data.split('-');
+        let indexElems = document.getElementsByClassName('index');
+        let i = -1;
+        let index = 1;
+        while(shifts.length > 0){
+          let shift = shifts.shift();
+          i = i + parseInt(shift);
+          indexElems[i].innerHTML = index;
+          mapIndexes.set(index.toString(), indexElems[i].parentElement.id);
+          index++;
+        }
+      }
+
+      function parseSolution(data){
+        let cells = Array.prototype.slice.call(document.getElementsByClassName('text'));
+        while(data.length > 0){
+          let char = data[0];
+          data = data.substring(1);
+          if(char != '/'){
+            let cellId = cells.shift().parentElement.id;
+            mapSolution.set(cellId, char);
+          }else{
+            cells.shift();
+          }
+        }
+      }
+
+      function parseClues(data){
+        let sectionId = "";
+        let lineIdPrefix = "";
+        while(data.length > 0){
+          let line = data.shift();
+          if(line == 'ACROSS'){
+            sectionId = 'across-section';
+            lineIdPrefix = 'A';
+          }else if(line == 'DOWN'){
+            sectionId = 'down-section';
+            lineIdPrefix = 'D';
+          }else{
+            let indexOfSpace = line.indexOf(' ');
+            let index = line.substring(0, indexOfSpace);
+            let clue = line.substring(indexOfSpace, line.length);
+            let lineElem = document.createElement('div');
+            lineElem.id = lineIdPrefix + index;
+            lineElem.innerHTML += (index + '. ' + clue);
+            addEventListenersToLine(lineElem);
+            document.getElementById(sectionId).appendChild(lineElem);
+          }
+        }
+      }
+
+      function addEventListenersToLine(lineElem){
+        lineElem.addEventListener('mouseenter', e =>{
+          if(selectedLineId != e.target.id){
+            e.target.style.backgroundColor = '#ccefff';
+          }
+        });
+        lineElem.addEventListener('mouseleave', e =>{
+          if(selectedLineId != e.target.id){
+            e.target.style.backgroundColor = 'white';
+          }
+        });
+        lineElem.addEventListener('click', e =>{
+          selectNewLine(e.target)
+        });
+      }
+
+      function selectNewLine(newLineElem, reset){
+        if(newLineElem != null){
+          newLineElem.scrollIntoView({block: "nearest"});
+          if(selectedLineId != newLineElem.id){
+            newLineElem.style.backgroundColor = '#99dfff';
+            if(selectedLineId != null){
+              let prevSelectedElem = document.getElementById(selectedLineId);
+              prevSelectedElem.style.backgroundColor = 'white';
+            }
+            selectedLineId = newLineElem.id;
+            highlightGridCells(selectedLineId, reset)
+          }
+        }
+      }
+
+      function highlightGridCells(selectedLineId, reset = true){
+        unHighlightCells();
+        let direction = selectedLineId[0];
+        let index = selectedLineId.substring(1);
+        let indexElemId = mapIndexes.get(index);
+        let indexElem = document.getElementById(indexElemId);
+        
+        if(reset){
+          selectedCellId = null;
+        }
+
+        let indexCoords = indexElemId.split('-');
+        let colId = parseInt(indexCoords[0]);
+        let rowId = parseInt(indexCoords[1]);
+
+        let foundFirstEmptyCell = false;
+        while(true){
+          let nextCellId = colId + '-' + rowId;
+          if(arrBlackCells.includes(nextCellId)){
+            break;
+          }else if(colId > nCols || rowId > nRows){
+            break;
+          }else{
+            let nextCell = document.getElementById(nextCellId);
+            if(reset && nextCell.children[1].innerHTML == '' && !foundFirstEmptyCell){
+              selectedCellId = nextCell.id;
+              foundFirstEmptyCell = true;
+            }
+            if(selectedCellId == nextCellId){
+              nextCell.style.backgroundColor = '#ffcc80';
+            }else{
+              nextCell.style.backgroundColor = '#ffe0b3';
+            }
+            arrHighlightedCellIds.push(nextCellId);
+          }
+          if(direction == 'A'){
+            colId++;
+          }else if(direction == 'D'){
+            rowId++;
+          }
+        }
+
+        if(selectedCellId == null){
+          selectedCellId = indexElemId;
+          indexElem.style.backgroundColor = '#ffcc80';
+        }
+      }
+
+      function unHighlightCells(){
+        while(arrHighlightedCellIds.length > 0){
+          let selectedCellElem = document.getElementById(arrHighlightedCellIds.shift());
+          selectedCellElem.style.backgroundColor = 'white';
+        }
+      }
+
+      function onKeyDown(e){
+        if(e.keyCode >= '65' && e.keyCode <= '90' && selectedCellId != null 
+          && !crosswordFinished){ // letters
+          let selectedCellElem = document.getElementById(selectedCellId);
+          selectedCellElem.children[1].innerHTML = e.key.toUpperCase();
+          let i = arrHighlightedCellIds.indexOf(selectedCellId) + 1;
+          let n = 0;
+          let newSelectedCellId = null;
+          while(n < arrHighlightedCellIds.length){
+            if(i == arrHighlightedCellIds.length){
+              i = 0;
+            }
+            if(document.getElementById(arrHighlightedCellIds[i]).children[1].innerHTML == ''){
+              newSelectedCellId = arrHighlightedCellIds[i];
+              break;
+            }
+            i++;
+            n++;
+          }
+          if(newSelectedCellId != null){
+            selectedCellElem.style.backgroundColor = '#ffe0b3';
+            document.getElementById(newSelectedCellId).style.backgroundColor = '#ffcc80';
+            selectedCellId = newSelectedCellId;
+          }
+          if(isGridFull()){
+            if(validateGrid()){
+              document.getElementById("correctPopup").style.display = 'block';
+              crosswordFinished = true;
+            }
+          }
+        }else if(e.keyCode == '46' && !crosswordFinished){ // delete
+          let selectedCellElem = document.getElementById(selectedCellId);
+          selectedCellElem.children[1].innerHTML = '';
+        }else if(e.keyCode == '8' && !crosswordFinished){ // backspace
+          let selectedCellElem = document.getElementById(selectedCellId);
+          selectedCellElem.children[1].innerHTML = '';
+          let i = arrHighlightedCellIds.indexOf(selectedCellId) - 1;
+          if(i >= 0){
+            let newSelectedCellId = arrHighlightedCellIds[i];
+            selectedCellElem.style.backgroundColor = '#ffe0b3';
+            document.getElementById(newSelectedCellId).style.backgroundColor = '#ffcc80';
+            selectedCellId = newSelectedCellId;
+          }
+        }else if(e.keyCode == '9'){ // tab
+          e.preventDefault();
+          if(selectedLineId != null){
+            selectNextLine(e.shiftKey);
+          }else{
+            selectNewLine(document.getElementById("across-section").children[0]);
+          }
+        }
+        else if(e.keyCode == '37'){ // left
+          if(selectedLineId[0] == 'D'){
+            selectLineOnCellClick(true);
+          }else{
+            moveSelectionAlongLine('left');
+          }
+        }
+        else if(e.keyCode == '38'){ // up
+          if(selectedLineId[0] == 'A'){
+            selectLineOnCellClick(true);
+          }else{
+            moveSelectionAlongLine('up');
+          }
+        }
+        else if(e.keyCode == '39'){ // right
+          if(selectedLineId[0] == 'D'){
+            selectLineOnCellClick(true);
+          }else{
+            moveSelectionAlongLine('right');
+          }
+        }
+        else if(e.keyCode == '40'){ // down
+          if(selectedLineId[0] == 'A'){
+            selectLineOnCellClick(true);
+          }else{
+            moveSelectionAlongLine('down');
+          }
+        }
+      }
+
+      function selectNextLine(reverse = false){
+        let selectedLineElem = document.getElementById(selectedLineId);
+        let clueSectionElem = selectedLineElem.parentElement;
+        let selectedLineIndex = Array.from(clueSectionElem.children).indexOf(selectedLineElem);
+        if(reverse){
+          selectedLineIndex--;
+          let newSelectedLineElem = null;
+          if(selectedLineIndex < 0){
+            let sectionLines = null;
+            if(clueSectionElem.id == 'across-section'){
+              sectionLines = document.getElementById("down-section").children;
+            }else if(clueSectionElem.id == 'down-section'){
+              sectionLines = document.getElementById("across-section").children;
+            }
+            newSelectedLineElem = sectionLines[sectionLines.length - 1]
+          }else{
+            newSelectedLineElem  = clueSectionElem.children[selectedLineIndex];
+          }
+          selectNewLine(newSelectedLineElem);
+        }else{
+          selectedLineIndex++;
+          let newSelectedLineElem = null;
+          if(selectedLineIndex >= clueSectionElem.children.length){
+            if(clueSectionElem.id == 'across-section'){
+              newSelectedLineElem = document.getElementById("down-section").children[0];
+            }else if(clueSectionElem.id == 'down-section'){
+              newSelectedLineElem = document.getElementById("across-section").children[0];
+            }
+          }else{
+            newSelectedLineElem  = clueSectionElem.children[selectedLineIndex];
+          }
+          selectNewLine(newSelectedLineElem);
+        }
+      }
+
+      function moveSelectionAlongLine(keyDirection){
+        let direction = selectedLineId[0];
+        if(direction == 'A'){
+          let i = arrHighlightedCellIds.indexOf(selectedCellId);
+          if(keyDirection == 'left'){
+            i--;
+            if(i < 0){
+              selectNextLine(true);
+            }else{
+              document.getElementById(selectedCellId).style.backgroundColor = '#ffe0b3';
+              document.getElementById(arrHighlightedCellIds[i]).style.backgroundColor = '#ffcc80';
+              selectedCellId = arrHighlightedCellIds[i];
+            }
+          }else if(keyDirection == 'right'){
+            i++;
+            if(i >= arrHighlightedCellIds.length){
+              selectNextLine();
+            }else{
+              document.getElementById(selectedCellId).style.backgroundColor = '#ffe0b3';
+              document.getElementById(arrHighlightedCellIds[i]).style.backgroundColor = '#ffcc80';
+              selectedCellId = arrHighlightedCellIds[i];
+            }
+          }
+        }else if(direction == 'D'){
+          let j = arrHighlightedCellIds.indexOf(selectedCellId);
+          if(keyDirection == 'up'){
+            j--;
+            if(j < 0){
+              selectNextLine(true);
+            }else{
+              document.getElementById(selectedCellId).style.backgroundColor = '#ffe0b3';
+              document.getElementById(arrHighlightedCellIds[j]).style.backgroundColor = '#ffcc80';
+              selectedCellId = arrHighlightedCellIds[j];
+            }
+          }else if(keyDirection == 'down'){
+            j++;
+            if(j >= arrHighlightedCellIds.length){
+              selectNextLine();
+            }else{
+              document.getElementById(selectedCellId).style.backgroundColor = '#ffe0b3';
+              document.getElementById(arrHighlightedCellIds[j]).style.backgroundColor = '#ffcc80';
+              selectedCellId = arrHighlightedCellIds[j];
+            }
+          }
+        }
+      }
+
+      function isGridFull(){
+        let cells = document.getElementsByClassName('text');
+        for(let i = 0; i < cells.length; i++){
+          if(cells[i].innerHTML == '' && !arrBlackCells.includes(cells[i].parentElement.id)){
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function validateGrid(){
+        let cells = document.getElementsByClassName('text');
+        for(let i = 0; i < cells.length; i++){
+          if(cells[i].innerHTML != mapSolution.get(cells[i].parentElement.id) && !arrBlackCells.includes(cells[i].parentElement.id)){
+            return false;
+          }
+        }
+        return true;
+      }
+    </script>
+  </body>
+</html>
