@@ -6,23 +6,27 @@
   </head>
   <body>
   <div id="correctPopup">Congratulations!</div>
-    <header>Crossword</header>
+    <header>
+      Crossword
+    </header>    
     <main>
-      <div id="cw-grid"></div>
-      <div id="clue-main">
-        <div class="clue-section">
-          <header class="clue-section-header">Across</header>
-          <div id="across-section" class="clue-section-body">
+      <input id="fileInput" type="file">
+      <div id="cw">
+        <div id="cw-grid"></div>
+        <div id="clue-main">
+          <div class="clue-section">
+            <header class="clue-section-header">Across</header>
+            <div id="across-section" class="clue-section-body">
+            </div>
           </div>
-        </div>
-        <div class="clue-section">
-          <header class="clue-section-header">Down</header>
-          <div id="down-section" class="clue-section-body">
+          <div class="clue-section">
+            <header class="clue-section-header">Down</header>
+            <div id="down-section" class="clue-section-body">
+            </div>
           </div>
         </div>
       </div>
-    </main>
-    <input id="fileInput" type="file">
+  </main>
     <script>
       var nRows = null;
       var nCols = null;
@@ -47,7 +51,7 @@
 
       function initializeCrossword(data){
         let splitData = data.split('\r\n');
-        parseDimensions(splitData.shift());
+        parseSize(splitData.shift());
         createGrid();
         parseBlackCells(splitData.shift());
         parseIndexes(splitData.shift());
@@ -55,13 +59,11 @@
         adjustClueSectionHeight();
         parseClues(splitData);
         selectNewLine(document.getElementById('across-section').children[0]);
-        console.log(mapSolution);
       }
 
-      function parseDimensions(data){
-        let dimensions = data.split('-');
-        nCols = dimensions[0];
-        nRows = dimensions[1];
+      function parseSize(data){
+        nRows = data;
+        nCols = data;
       }
 
       function adjustClueSectionHeight(){
@@ -100,7 +102,6 @@
             newCell.appendChild(indexElem);
             let textElem = document.createElement('div');
             textElem.className = 'text';
-            textElem.style.userSelect = 'none';
             newCell.appendChild(textElem);
             newRow.appendChild(newCell);
           }
