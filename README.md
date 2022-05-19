@@ -18,6 +18,6 @@ On line 4, '/' represents a black square.
 
 All Across and Down clues follow. A clue should have the index number first followed by a space and the clue. All Across clues are preceded by ACROSS. All Down clues are preceded by DOWN.
 
-A sample data file 'crossword-import.txt' is provided. 
+A sample data file 'crossword-data.txt' is provided. 
 
 This data comes from 'sample-crossword.pdf' which contains a crossword by Penny Dell taken from "https://www.arkadium.com/games/daily-crossword-pennydell/".
