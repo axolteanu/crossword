@@ -20,4 +20,4 @@ All Across and Down clues follow. A clue should have the index number first foll
 
 A sample data file 'crossword-import.txt' is provided. 
 
-This data comes from 'sample-crossword.pdf' which contains a crossword by Penn Dell taken from "https://www.arkadium.com/games/daily-crossword-pennydell/".
+This data comes from 'sample-crossword.pdf' which contains a crossword by Penny Dell taken from "https://www.arkadium.com/games/daily-crossword-pennydell/".
