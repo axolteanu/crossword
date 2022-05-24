@@ -5,7 +5,7 @@
     <link href="css/style.css" rel="stylesheet">
   </head>
   <body>
-  <div id="correctPopup">Congratulations!</div>
+    <div id="correctPopup">Congratulations!</div>
     <header>
       Crossword
     </header>    
@@ -26,7 +26,7 @@
           </div>
         </div>
       </div>
-  </main>
+    </main>
     <script>
       var nRows = null;
       var nCols = null;
@@ -38,10 +38,12 @@
       var arrHighlightedCellIds  = new Array();
       var selectedCellId = null;
       var crosswordFinished = false;
-
-      document.getElementById('fileInput').addEventListener('change', function() {
+      var fi = document.getElementById('fileInput');
+      
+      fi.addEventListener('change', function() {
           var fr = new FileReader();
           fr.onload = function(){
+            fi.style.display = 'none';
             initializeCrossword(fr.result);
           }
           fr.readAsText(this.files[0]);
@@ -56,7 +58,6 @@
         parseBlackCells(splitData.shift());
         parseIndexes(splitData.shift());
         parseSolution(splitData.shift());
-        adjustClueSectionHeight();
         parseClues(splitData);
         selectNewLine(document.getElementById('across-section').children[0]);
       }
@@ -66,17 +67,8 @@
         nCols = data;
       }
 
-      function adjustClueSectionHeight(){
-        let clueMainHeight = document.getElementById('clue-main').getBoundingClientRect().height;
-        let sectionHeight = (clueMainHeight / 2) - 10;
-
-        let clueSections = document.getElementsByClassName('clue-section');
-        clueSections[0].style.height = sectionHeight + 'px';
-        clueSections[1].style.height = sectionHeight + 'px';
-        clueSections[1].style.marginTop = 20 + 'px';
-      }
-
       function createGrid(){
+        cwGrid.style.border = '0';
         for(let i = 0; i < nRows; i++){
           const newRow = document.createElement('div');
           newRow.style.flexGrow = '1';
@@ -448,18 +440,14 @@
           let i = arrHighlightedCellIds.indexOf(selectedCellId);
           if(keyDirection == 'left'){
             i--;
-            if(i < 0){
-              selectNextLine(true);
-            }else{
+            if(i >= 0){
               document.getElementById(selectedCellId).style.backgroundColor = '#ffe0b3';
               document.getElementById(arrHighlightedCellIds[i]).style.backgroundColor = '#ffcc80';
               selectedCellId = arrHighlightedCellIds[i];
             }
           }else if(keyDirection == 'right'){
             i++;
-            if(i >= arrHighlightedCellIds.length){
-              selectNextLine();
-            }else{
+            if(i < arrHighlightedCellIds.length){
               document.getElementById(selectedCellId).style.backgroundColor = '#ffe0b3';
               document.getElementById(arrHighlightedCellIds[i]).style.backgroundColor = '#ffcc80';
               selectedCellId = arrHighlightedCellIds[i];
@@ -469,18 +457,14 @@
           let j = arrHighlightedCellIds.indexOf(selectedCellId);
           if(keyDirection == 'up'){
             j--;
-            if(j < 0){
-              selectNextLine(true);
-            }else{
+            if(j >= 0){
               document.getElementById(selectedCellId).style.backgroundColor = '#ffe0b3';
               document.getElementById(arrHighlightedCellIds[j]).style.backgroundColor = '#ffcc80';
               selectedCellId = arrHighlightedCellIds[j];
             }
           }else if(keyDirection == 'down'){
             j++;
-            if(j >= arrHighlightedCellIds.length){
-              selectNextLine();
-            }else{
+            if(j < arrHighlightedCellIds.length){
               document.getElementById(selectedCellId).style.backgroundColor = '#ffe0b3';
               document.getElementById(arrHighlightedCellIds[j]).style.backgroundColor = '#ffcc80';
               selectedCellId = arrHighlightedCellIds[j];

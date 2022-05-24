@@ -25,20 +25,25 @@ main{
 #cw-grid{
   height: 500px;
   width: 500px;
-  resize: both;
+  border: 1px solid black;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 #clue-main{
   margin-left: 20px;
   height: 500px;
   width: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 .clue-section{
   border: 1px solid black;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  height: 240px;
 }
 .clue-section-header{
   display: flex;
