@@ -1,4 +1,4 @@
-This repository contains source code for a web crossword presenter.
+This repository contains source code for a web crossword UI.
 
 To use it, open the src/index.html in a browser and input a crossword data file.
 The data file contains information about the location of all indexes and black squares on the grid as well as all the clues and the solution.
